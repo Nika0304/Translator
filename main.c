@@ -8,7 +8,8 @@ int main()
     char *buffer = loadFile("tests/testlex.c"); //citeste fisierul
     Token *tokens = tokenize(buffer); //face analiza lexicala
     showTokens(tokens); //afiseaza tokenii
-    
+    parse(tokens);
+    printf("\nProgram corect sintactic\n");
     freeTokens(tokens); //Eliberează linked list de tokeni 
     free(buffer); //Eliberează buffer ul citit din fișier
 
