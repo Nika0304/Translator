@@ -4,14 +4,31 @@
 #include <stdbool.h>
 void parse(Token *tokens);
 
-bool unit();
-bool structDef();
-bool varDef();
 bool typeBase();
 bool arrayDecl();
+bool varDef();
+bool structDef();
 bool fnParam();
 bool fnDef();
 bool stmCompound();
-bool exprAssign();
-bool expr();
 bool stm();
+bool expr();
+bool exprAssign();
+bool exprOr();
+bool exprOrPrim();
+bool exprAnd();
+bool exprAndPrim();
+bool exprEq();
+bool exprEqPrim();
+bool exprRel();
+bool exprRelPrim();
+bool exprAdd();
+bool exprAddPrim();
+bool exprMul();
+bool exprMulPrim();
+bool exprCast();
+bool exprUnary();
+bool exprPostfix();
+bool exprPostfixPrim();
+bool exprPrimary();
+bool unit();

@@ -5,7 +5,7 @@
 #include "parser.h"
 int main()
 {
-    char *buffer = loadFile("tests/testlex.c"); //citeste fisierul
+    char *buffer = loadFile("tests/testparser.c"); //citeste fisierul
     Token *tokens = tokenize(buffer); //face analiza lexicala
     showTokens(tokens); //afiseaza tokenii
     parse(tokens);
