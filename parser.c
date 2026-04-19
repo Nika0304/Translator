@@ -45,7 +45,6 @@ bool typeBase()
         if(consume(ID)){
             return true;
         }
-        tkerr("lipseste numele structurii");
     }
     return false;
 }
@@ -63,10 +62,12 @@ bool unit()
 	if(consume(END))
 	{
 		return true;
-	}
+	} 
+    tkerr("eroare de sintaxa");
 	return false;
 	}
-// arrayDecl: LBRACKET INT? RBRACKET
+
+    // arrayDecl: LBRACKET INT? RBRACKET
 bool arrayDecl()
 {
     Token *start = iTk;
@@ -108,7 +109,7 @@ bool varDef()
 // structDef: STRUCT ID LACC varDef* RACC SEMICOLON
 bool structDef()
 {
-    Token *start = iTk;
+    Token *start = iTk; //salvează poziția curentă în lista de tokeni, daca nu reuseste parsarea revenim
 
     if(consume(STRUCT))
     {
@@ -134,11 +135,10 @@ bool structDef()
             }
 
             iTk = start;
-            return false;
+            return false; 
         }
         tkerr("lipseste numele structurii");
     }
-
     iTk = start;
     return false;
 }
@@ -161,6 +161,7 @@ bool fnParam()
     iTk = start;
     return false;
 }
+
 //stmCompound: LACC (varDef | stm)* RACC
 bool stmCompound()
 {
@@ -210,7 +211,6 @@ bool exprPrimary()
             }
             tkerr("lipseste )");
         }
-
         return true;
     }
 
@@ -278,6 +278,7 @@ bool exprPostfixPrim()
 
     return true;
 }
+
 //exprPostfix: exprPrimary exprPostfixPrim
 bool exprPostfix()
 {
@@ -314,8 +315,6 @@ bool exprUnary()
     {
         return true;
     }
-
-    iTk = start;
     return false;
 }
 
@@ -353,6 +352,23 @@ bool exprCast()
     return false;
 }
 
+//exprMul: exprCast exprMulPrim
+bool exprMul()
+{
+    Token *start = iTk;
+
+    if (exprCast())
+    {
+        if (exprMulPrim())
+        {
+            return true;
+        }
+    }
+
+    iTk = start;
+    return false;
+}
+
 //exprMulPrim: ( MUL | DIV ) exprCast exprMulPrim | ε
 bool exprMulPrim()
 {
@@ -366,14 +382,15 @@ bool exprMulPrim()
     }
     return true;
 }
-//exprMul: exprCast exprMulPrim
-bool exprMul()
+
+//exprAdd: exprMul exprAddPrim
+bool exprAdd()
 {
     Token *start = iTk;
 
-    if (exprCast())
+    if (exprMul())
     {
-        if (exprMulPrim())
+        if (exprAddPrim())
         {
             return true;
         }
@@ -396,14 +413,15 @@ bool exprAddPrim()
     }
     return true;
 }
-//exprAdd: exprMul exprAddPrim
-bool exprAdd()
+
+//exprRel: exprAdd exprRelPrim
+bool exprRel()
 {
     Token *start = iTk;
 
-    if (exprMul())
+    if (exprAdd())
     {
-        if (exprAddPrim())
+        if (exprRelPrim())
         {
             return true;
         }
@@ -426,22 +444,6 @@ bool exprRelPrim()
     }
     return true;
 }
-//exprRel: exprAdd exprRelPrim
-bool exprRel()
-{
-    Token *start = iTk;
-
-    if (exprAdd())
-    {
-        if (exprRelPrim())
-        {
-            return true;
-        }
-    }
-
-    iTk = start;
-    return false;
-}
 
 // exprEq: exprRel exprEqPrim
 bool exprEq() 
@@ -455,6 +457,7 @@ bool exprEq()
     iTk = start;
     return false;
 }
+
 // exprEqPrim: (EQUAL|NOTEQ) exprRel exprEqPrim | ε
 bool exprEqPrim() 
 {
@@ -479,6 +482,7 @@ bool exprAnd()
     iTk = start;
     return false;
 }
+
 // exprAndPrim: AND exprEq exprAndPrim | ε
 bool exprAndPrim() 
 {
@@ -503,6 +507,7 @@ bool exprOr()
     iTk = start;
     return false;
 }
+
 // exprOrPrim: OR exprAnd exprOrPrim | ε
 bool exprOrPrim() 
 {
@@ -539,11 +544,13 @@ bool exprAssign()
     iTk = start;
     return false;
 }
+
 //expr: exprAssign
 bool expr()
 {
     return exprAssign();
 }
+
 /*stm: stmCompound 
         | IF LPAR expr RPAR stm (ELSE stm)?
         | WHILE LPAR expr RPAR stm
@@ -623,21 +630,21 @@ bool stm()
 
     // expr? SEMICOLON
     iTk = start;
+    if (expr()) 
     {
-        Token *startExpr = iTk;
-
-        if (expr()) {
-            if (consume(SEMICOLON)) {
-                return true;
-            } else {
-                tkerr("lipseste ; dupa expresie");
-            }
-        }
-
-        iTk = startExpr;
-        if (consume(SEMICOLON)) {
+        if (consume(SEMICOLON)) 
+        {
             return true;
+        } else 
+        {
+            tkerr("lipseste ; dupa expresie");
         }
+    }
+
+    iTk = start;
+    if (consume(SEMICOLON)) 
+    {
+        return true;
     }
 
     iTk = start;
@@ -706,9 +713,9 @@ bool fnDef()
     return false;
 }
 
-
-
 void parse(Token *tokens){
 	iTk=tokens;
 	if(!unit())tkerr("syntax error");
 	}
+
+
