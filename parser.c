@@ -296,18 +296,29 @@ bool exprPostfix()
     return false;
 }
 
+
 //exprUnary: ( SUB | NOT ) exprUnary | exprPostfix
 bool exprUnary()
 {
     Token *start = iTk;
 
-    if (consume(SUB) || consume(NOT))
+    if (consume(SUB))
     {
         if (exprUnary())
         {
             return true;
         }
-        tkerr("lipseste expresia dupa operatorul unar");
+        tkerr("lipseste expresia dupa operatorul unar '-'");
+    }
+
+    iTk = start;
+    if (consume(NOT))
+    {
+        if (exprUnary())
+        {
+            return true;
+        }
+        tkerr("lipseste expresia dupa operatorul unar '!'");
     }
 
     iTk = start;
@@ -315,6 +326,8 @@ bool exprUnary()
     {
         return true;
     }
+
+    iTk = start;
     return false;
 }
 
@@ -372,13 +385,21 @@ bool exprMul()
 //exprMulPrim: ( MUL | DIV ) exprCast exprMulPrim | ε
 bool exprMulPrim()
 {
-    if (consume(MUL) || consume(DIV))
+    if (consume(MUL))
     {
         if (exprCast())
         {
             return exprMulPrim();
         }
-        tkerr("lipseste expresia dupa * sau /");
+        tkerr("lipseste expresia dupa *");
+    }
+    if (consume(DIV))
+    {
+        if (exprCast())
+        {
+            return exprMulPrim();
+        }
+        tkerr("lipseste expresia dupa /");
     }
     return true;
 }
@@ -403,13 +424,21 @@ bool exprAdd()
 //exprAddPrim: ( ADD | SUB ) exprMul exprAddPrim | ε
 bool exprAddPrim()
 {
+    if (consume(ADD))
+    {
+        if (exprMul())
+        {
+            return exprAddPrim();
+        }
+        tkerr("lipseste expresia dupa +");
+    }
     if (consume(ADD) || consume(SUB))
     {
         if (exprMul())
         {
             return exprAddPrim();
         }
-        tkerr("lipseste expresia dupa + sau -");
+        tkerr("lipseste expresia dupa -");
     }
     return true;
 }
@@ -434,13 +463,29 @@ bool exprRel()
 //exprRelPrim: ( LESS | LESSEQ | GREATER | GREATEREQ ) exprAdd exprRelPrim | ε
 bool exprRelPrim()
 {
-    if (consume(LESS) || consume(LESSEQ) || consume(GREATER) || consume(GREATEREQ))
+    if (consume(LESS))
     {
         if (exprAdd())
-        {
             return exprRelPrim();
-        }
-        tkerr("lipseste expresia dupa operatorul relational");
+        tkerr("lipseste expresia dupa <");
+    }
+    else if (consume(LESSEQ))
+    {
+        if (exprAdd())
+            return exprRelPrim();
+        tkerr("lipseste expresia dupa <=");
+    }
+    else if (consume(GREATER))
+    {
+        if (exprAdd())
+            return exprRelPrim();
+        tkerr("lipseste expresia dupa >");
+    }
+    else if (consume(GREATEREQ))
+    {
+        if (exprAdd())
+            return exprRelPrim();
+        tkerr("lipseste expresia dupa >=");
     }
     return true;
 }
@@ -461,11 +506,17 @@ bool exprEq()
 // exprEqPrim: (EQUAL|NOTEQ) exprRel exprEqPrim | ε
 bool exprEqPrim() 
 {
-    if (consume(EQUAL) || consume(NOTEQ)) {
+    if (consume(EQUAL)) {
         if (exprRel()) {
             return exprEqPrim();
         }
-        tkerr("lipseste expresia dupa == sau !=");
+        tkerr("lipseste expresia dupa == ");
+    }
+    if (consume(NOTEQ)) {
+        if (exprRel()) {
+            return exprEqPrim();
+        }
+        tkerr("lipseste expresia dupa !=");
     }
     return true;
 }
@@ -694,7 +745,7 @@ bool fnDef()
         {
             if (!fnParam())
             {
-                tkerr("lipseste parametrul dupa ,");
+                tkerr("lipseste parametrul dupa , sau parametru invalid");
             }
         }
     }
