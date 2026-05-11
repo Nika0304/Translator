@@ -63,18 +63,36 @@ void *popp(){
 	return SP--->p;
 	}
 
+void pushd(double d){
+	if(SP+1==stack+10000)err("trying to push into a full stack");
+	(++SP)->f=d;
+	}
+
+double popd(){
+	if(SP==stack-1)err("trying to pop from empty stack");
+	return SP--->f;
+	}
+
 void put_i(){
 	printf("=> %d",popi());
 	}
 
-void vmInit(){
+void put_d(){
+	printf("=> %g",popd());
+	}
+
+void vmInit(){//Aici înregistrezi funcțiile externe în tabela de simboluri.
 	Symbol *fn=addExtFn("put_i",put_i,(Type){TB_VOID,NULL,-1});
 	addFnParam(fn,"i",(Type){TB_INT,NULL,-1});
+
+	fn=addExtFn("put_d",put_d,(Type){TB_VOID,NULL,-1});
+	addFnParam(fn,"d",(Type){TB_DOUBLE,NULL,-1});
 	}
 
 void run(Instr *IP){
 	Val v;
 	int iArg,iTop,iBefore;
+	double dTop,dBefore;
 	void(*extFnPtr)();
 	for(;;){
 		// shows the index of the current instruction and the number of values from stack
@@ -88,10 +106,15 @@ void run(Instr *IP){
 				pushi(IP->arg.i);
 				IP=IP->next;
 				break;
+			case OP_PUSH_D:
+				printf("PUSH.d\t%g",IP->arg.f);
+				pushd(IP->arg.f);
+				IP=IP->next;
+				break;
 			case OP_CALL:
-				pushp(IP->next);
+				pushp(IP->next);//pune pe stivă adresa instrucțiunii următoare, adică adresa de returnare;
 				printf("CALL\t%p",IP->arg.instr);
-				IP=IP->arg.instr;
+				IP=IP->arg.instr;//sare la prima instrucțiune din funcție.
 				break;
 			case OP_CALL_EXT:
 				extFnPtr=IP->arg.extFnPtr;
@@ -99,7 +122,8 @@ void run(Instr *IP){
 				extFnPtr();
 				IP=IP->next;
 				break;
-			case OP_ENTER:
+			case OP_ENTER://Această instrucțiune pregătește cadrul de stivă al unei funcții.
+
 				pushp(FP);
 				FP=SP;
 				SP+=IP->arg.i;
@@ -122,7 +146,7 @@ void run(Instr *IP){
 				printf("JF\t%p\t// %d",IP->arg.instr,iTop);
 				IP=iTop ? IP->next : IP->arg.instr;
 				break;
-			case OP_FPLOAD:
+			case OP_FPLOAD://Încarcă o valoare din cadrul funcției și o pune pe stivă.
 				v=FP[IP->arg.i];
 				pushv(v);
 				printf("FPLOAD\t%d\t// i:%d, f:%g",IP->arg.i,v.i,v.f);
@@ -141,11 +165,25 @@ void run(Instr *IP){
 				printf("ADD.i\t// %d+%d -> %d",iBefore,iTop,iBefore+iTop);
 				IP=IP->next;
 				break;
+		    case OP_ADD_D:
+				dTop=popd();
+				dBefore=popd();
+				pushd(dBefore+dTop);
+				printf("ADD.d\t// %g+%g -> %g",dBefore,dTop,dBefore+dTop);
+				IP=IP->next;
+				break;
 			case OP_LESS_I:
 				iTop=popi();
 				iBefore=popi();
 				pushi(iBefore<iTop);
 				printf("LESS.i\t// %d<%d -> %d",iBefore,iTop,iBefore<iTop);
+				IP=IP->next;
+				break;
+			case OP_LESS_D:
+				dTop=popd();
+				dBefore=popd();
+				pushi(dBefore<dTop);
+				printf("LESS.d\t// %g<%g -> %d",dBefore,dTop,dBefore<dTop);
 				IP=IP->next;
 				break;
 			default:err("run: instructiune neimplementata: %d",IP->op);
@@ -190,6 +228,57 @@ Instr *genTestProgram(){
 	addInstrWithInt(&code,OP_FPSTORE,1);
 	// } ( the next iteration)
 	addInstr(&code,OP_JMP)->arg.instr=whilePos;
+	// returns from function
+	jfAfter->arg.instr=addInstrWithInt(&code,OP_RET_VOID,1);
+	return code;
+	}
+
+
+/* The program implements the following AtomC source code:
+f(2.0);
+void f(double n){		// stack frame: n[-2] ret[-1] oldFP[0] i[1]
+	double i=0;
+	while(i<n){
+		put_d(i);
+		i=i+0.5;
+		}
+	}
+*/
+
+Instr *genTestProgramDouble(){
+	Instr *code=NULL;
+	addInstrWithDouble(&code,OP_PUSH_D,2.0);
+	Instr *callPos=addInstr(&code,OP_CALL);
+	addInstr(&code,OP_HALT);
+	callPos->arg.instr=addInstrWithInt(&code,OP_ENTER,1);//pregateste cadrul fynctiei
+    
+	// cadrul: n[-2] ret[-1] oldFP[0] i[1]
+	
+	// double i=0.0;
+	addInstrWithDouble(&code,OP_PUSH_D,0.0);
+	addInstrWithInt(&code,OP_FPSTORE,1);
+
+	// while(i<n){
+	Instr *whilePos=addInstrWithInt(&code,OP_FPLOAD,1);
+	addInstrWithInt(&code,OP_FPLOAD,-2);
+	addInstr(&code,OP_LESS_D);
+	Instr *jfAfter=addInstr(&code,OP_JF);
+
+	// put_d(i);
+	addInstrWithInt(&code,OP_FPLOAD,1);
+	Symbol *s=findSymbol("put_d");
+	if(!s)err("undefined: put_d");
+	addInstr(&code,OP_CALL_EXT)->arg.extFnPtr=s->fn.extFnPtr;
+
+	// i=i+0.5;
+	addInstrWithInt(&code,OP_FPLOAD,1);
+	addInstrWithDouble(&code,OP_PUSH_D,0.5);
+	addInstr(&code,OP_ADD_D);
+	addInstrWithInt(&code,OP_FPSTORE,1);
+
+	// } ( the next iteration)
+	addInstr(&code,OP_JMP)->arg.instr=whilePos;
+
 	// returns from function
 	jfAfter->arg.instr=addInstrWithInt(&code,OP_RET_VOID,1);
 	return code;

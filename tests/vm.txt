@@ -1,0 +1,36 @@
+f(2.0);
+void f(double n){		
+	double i=0;
+	while(i<n){
+		put_d(i);
+		i=i+0.5;
+		}
+	}
+
+
+
+PUSH.d 2.0
+CALL f
+HALT
+
+f: ENTER 1      cadrul functiei:         n[-2] ret[-1] oldFP[0] i[1]
+
+PUSH.d 0.0
+FPSTORE 1
+
+while_start:FPLOAD 1
+FPLOAD -2
+LESS.d
+JF after_while
+
+FPLOAD 1
+CALL_EXT put_d
+
+FPLOAD 1
+PUSH.d 0.5
+ADD.d
+FPSTORE 1
+
+JMP while_start
+
+after_while: RET_VOID 1
